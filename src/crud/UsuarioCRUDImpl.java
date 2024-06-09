@@ -57,6 +57,7 @@ public class UsuarioCRUDImpl implements usuarioCRUD {
 			sc.nextLine();
 			switch (op) {
 			case 1:
+				System.out.println("Informe o novo nome");
 				String novoNome = sc.nextLine();
 				atualizar = connection.prepareStatement( "UPDATE usuarios SET name = ? WHERE id = ?");
 				atualizar.setString(1, novoNome);
@@ -65,21 +66,23 @@ public class UsuarioCRUDImpl implements usuarioCRUD {
 				break;
 
 			case 2:
+				System.out.println("Informe o novo email");
 				String novoEmail = sc.next();
 				if (!novoEmail.contains("@")) {
 					throw new EmailInvalidoException("Email invalido " + novoEmail);
 				}
-				atualizar = connection.prepareStatement("UPDATE usuarios" + "SET email = ?" + "WHERE " + "(id= ?) ");
+				atualizar = connection.prepareStatement("UPDATE usuarios" + "SET email = ?" + "WHERE " + "id= ? ");
 				atualizar.setNString(1, novoEmail);
 				atualizar.setInt(2, usuario.getId());
 				atualizar.executeUpdate();
 				break;
 			case 3:
+				System.out.println("Informe a nova senha");
 				String novaSenha = sc.nextLine();
 				if (!novaSenha.equals(usuario.getSenha())) {
 					throw new senhaIncorretaException("Senha Incorreta");
 				}
-				atualizar = connection.prepareStatement("UPDATE usuarios" + "SET senha = ?" + "WHERE " + "(id= ?) ");
+				atualizar = connection.prepareStatement("UPDATE usuarios" + "SET senha = ?" + "WHERE " + "id= ? ");
 				atualizar.setString(1, novaSenha);
 				atualizar.setInt(2, usuario.getId());
 				atualizar.executeUpdate();
