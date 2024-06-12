@@ -12,33 +12,37 @@ import java.util.Scanner;
 import Conexao.DB;
 import Entidades.Usuario;
 import exceptions.EmailInvalidoException;
+import exceptions.EmailJaCadastradoException;
 import exceptions.senhaIncorretaException;
 import exceptions.usuarioOuSenhaIncorretaException;
 
-public class UsuarioCRUDImpl implements usuarioCRUD {
+public class usuarioCRUDImpl implements usuarioCRUD {
 	Statement st = null;
 	Connection connection = null;
 	ResultSet rs = null;
 
-	public UsuarioCRUDImpl(Connection connection) {
+	public usuarioCRUDImpl(Connection connection) {
 		this.connection = connection;
 	}
 
 	@Override
-	public void cadastrar(Usuario usuario) {
+	public void cadastrar(Usuario usuario) throws Exception {
 		PreparedStatement cad = null;
 		try {
 			connection = DB.getConnection();
-			cad = connection
-					.prepareStatement("INSERT INTO usuarios  (name, email, senha)  VALUES (?, ?, ?)");
+			if (EmailJaCadastrado(usuario.getEmail())) {
+				throw new EmailJaCadastradoException("Email ja Cadastrado");
+			}
+			cad = connection.prepareStatement("INSERT INTO usuarios  (name, email, senha)  VALUES (?, ?, ?)");
 			cad.setString(1, usuario.getName());
 			cad.setString(2, usuario.getEmail());
 			cad.setString(3, usuario.getSenha());
-			
+
 			cad.executeUpdate();
-			
+
 		} catch (SQLException e) {
 			e.printStackTrace();
+			throw new Exception("Erro ao cadastrar usuário: " + e.getMessage());
 		} finally {
 			DB.closePreparedStatement(cad);
 			DB.closeConnection();
@@ -59,7 +63,7 @@ public class UsuarioCRUDImpl implements usuarioCRUD {
 			case 1:
 				System.out.println("Informe o novo nome");
 				String novoNome = sc.nextLine();
-				atualizar = connection.prepareStatement( "UPDATE usuarios SET name = ? WHERE id = ?");
+				atualizar = connection.prepareStatement("UPDATE usuarios SET name = ? WHERE id = ?");
 				atualizar.setString(1, novoNome);
 				atualizar.setInt(2, usuario.getId());
 				atualizar.executeUpdate();
@@ -71,7 +75,7 @@ public class UsuarioCRUDImpl implements usuarioCRUD {
 				if (!novoEmail.contains("@")) {
 					throw new EmailInvalidoException("Email invalido " + novoEmail);
 				}
-				atualizar = connection.prepareStatement("UPDATE usuarios" + "SET email = ?" + "WHERE " + "id= ? ");
+				atualizar = connection.prepareStatement("UPDATE usuarios SET email = ? WHERE  + id= ? ");
 				atualizar.setNString(1, novoEmail);
 				atualizar.setInt(2, usuario.getId());
 				atualizar.executeUpdate();
@@ -82,7 +86,7 @@ public class UsuarioCRUDImpl implements usuarioCRUD {
 				if (!novaSenha.equals(usuario.getSenha())) {
 					throw new senhaIncorretaException("Senha Incorreta");
 				}
-				atualizar = connection.prepareStatement("UPDATE usuarios" + "SET senha = ?" + "WHERE " + "id= ? ");
+				atualizar = connection.prepareStatement("UPDATE usuarios SET senha = ? WHERE  + id= ? ");
 				atualizar.setString(1, novaSenha);
 				atualizar.setInt(2, usuario.getId());
 				atualizar.executeUpdate();
@@ -154,10 +158,7 @@ public class UsuarioCRUDImpl implements usuarioCRUD {
 			st = connection.createStatement();
 			rs = st.executeQuery("SELECT name, email  FROM usuarios");
 			while (rs.next()) {
-				Usuario usuario = new Usuario(
-						rs.getString("name"), 
-						rs.getString("email"), 
-						null);
+				Usuario usuario = new Usuario(rs.getString("name"), rs.getString("email"), null);
 				usuarios.add(usuario);
 			}
 		} catch (SQLException e) {
@@ -170,5 +171,28 @@ public class UsuarioCRUDImpl implements usuarioCRUD {
 			DB.closeConnection();
 		}
 		return usuarios;
+	}
+
+	@Override
+	public boolean EmailJaCadastrado(String email) {
+		PreparedStatement ps = null;
+		ResultSet rs = null;
+		boolean emailExists = false;
+		try {
+			connection = DB.getConnection();
+			ps = connection.prepareStatement("SELECT COUNT(*) FROM usuarios WHERE email = ?");
+			ps.setString(1, email);
+			rs = ps.executeQuery();
+			if (rs.next()) {
+				emailExists = rs.getInt(1) > 0;
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			DB.closeResultSet(rs);
+			DB.closePreparedStatement(ps);
+			DB.closeConnection();
+		}
+		return emailExists;
 	}
 }

@@ -1,22 +1,27 @@
 package Entidades;
 
 import exceptions.EmailInvalidoException;
+import exceptions.NomeIncompletoException;
 
 public class Usuario {
 	private int id;
 	private String name;
 	private String email;
 	private String senha;
-	
+
 	public Usuario() {
 	}
+
 	public Usuario(String name, String email, String senha) throws Exception {
 		this.name = name;
-		this.email = email;
-		if(!email.contains("@")) {
-			throw new EmailInvalidoException ("Email invalido " + email);
+		if (name.length() < 10) {
+			throw new NomeIncompletoException("Nome Incopleto");
 		}
-		this.senha  = senha;
+		this.email = email;
+		if (!email.contains("@")) {
+			throw new EmailInvalidoException("Email invalido " + email);
+		}
+		this.senha = senha;
 	}
 
 	public int getId() {
@@ -50,6 +55,7 @@ public class Usuario {
 	public void setEmail(String email) {
 		this.email = email;
 	}
+
 	public String toString() {
 		return "Usuario [id=" + id + ", name=" + name + ", email=" + email + "]";
 	}
