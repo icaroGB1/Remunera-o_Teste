@@ -11,31 +11,6 @@ import java.sql.Statement;
 import java.util.Properties;
 
 public class DB {
-	private static Connection conn = null;
-
-	public static Connection getConnection() {
-		if (conn == null) {
-			try {
-				Properties props = loadProperties();
-				String url = props.getProperty("dburl");
-				conn = DriverManager.getConnection(url, props);
-			} catch (SQLException e) {
-				throw new DbException(e.getMessage());
-			}
-		}
-		return conn;
-	}
-
-	public static void closeConnection() {
-		if (conn != null) {
-			try {
-				conn.close();
-			} catch (SQLException e) {
-				throw new DbException(e.getMessage());
-			}
-		}
-	}
-
 	private static Properties loadProperties() {
 		try (InputStream fs = DB.class.getClassLoader().getResourceAsStream("db.properties")) {
 			if (fs == null) {
@@ -49,12 +24,32 @@ public class DB {
 		}
 	}
 
+	public static Connection getConnection() {
+		Properties props = loadProperties();
+		String url = props.getProperty("dburl") + "?allowPublicKeyRetrieval=true&useSSL=false";
+		try {
+			return DriverManager.getConnection(url, props.getProperty("user"), props.getProperty("password"));
+		} catch (SQLException e) {
+			throw new DbException("Erro ao estabelecer conexão com o banco de dados: " + e.getMessage(), e);
+		}
+	}
+
+	public static void closeConnection(Connection conn) {
+		if (conn != null) {
+			try {
+				conn.close();
+			} catch (SQLException e) {
+				throw new DbException("Erro ao fechar conexão: " + e.getMessage(), e);
+			}
+		}
+	}
+
 	public static void closeStatement(Statement st) {
 		if (st != null) {
 			try {
 				st.close();
 			} catch (SQLException e) {
-				throw new DbException(e.getMessage());
+				throw new DbException("Erro ao fechar Statement: " + e.getMessage(), e);
 			}
 		}
 	}
@@ -64,19 +59,18 @@ public class DB {
 			try {
 				rs.close();
 			} catch (SQLException e) {
-				throw new DbException(e.getMessage());
+				throw new DbException("Erro ao fechar ResultSet: " + e.getMessage(), e);
 			}
 		}
 	}
 
 	public static void closePreparedStatement(PreparedStatement ps) {
-		try {
-			if (ps != null) {
+		if (ps != null) {
+			try {
 				ps.close();
+			} catch (SQLException e) {
+				throw new DbException("Erro ao fechar PreparedStatement: " + e.getMessage(), e);
 			}
-		} catch (SQLException e) {
-			System.err.println("Erro ao fechar PreparedStatement: " + e.getMessage());
-			e.printStackTrace();
 		}
 	}
 }

@@ -15,72 +15,57 @@ import Entidades.Produto;
 import Entidades.Venda;
 
 public class ItemVendaCRUDImpl implements ItemVendaCRUD {
-	Statement st = null;
-	Connection connection = null;
-	ResultSet rs = null;
 
 	@Override
-	public void cadastrar(ItemVenda itemVenda, Venda venda, Produto produto) {
-		PreparedStatement cad = null;
-		try {
-			connection = DB.getConnection();
-			cad = connection.prepareStatement(
-					"INSERT INTO itemvenda (id_venda, id_produto, quantidade, subtotal) values(?, ?, ?, ?)");
-			cad.setInt(1, venda.getId());
-			cad.setInt(2, produto.getId());
-			cad.setInt(3, itemVenda.getQuantidade());
-			cad.setBigDecimal(4, itemVenda.getSubtotal());
-			cad.executeUpdate();
+	public void cadastrar(ItemVenda itemVenda, Venda venda, List<ItemVenda> itensVenda) {
+		try (Connection connection = DB.getConnection()) {
+			for (ItemVenda itens : itensVenda) {
+				Produto produto = itens.getProduto();
+				itens.calcularSubtotal(produto);
+				try (PreparedStatement cad = connection.prepareStatement(
+						"INSERT INTO itemvenda (id_venda, id_produto, quantidade, subtotal) values(?, ?, ?, ?)")) {
+					cad.setInt(1, venda.getId());
+					cad.setInt(2, produto.getId());
+					cad.setInt(3, itens.getQuantidade());
+					cad.setBigDecimal(4, itens.getSubtotal());
+					cad.executeUpdate();
+				}
+			}
 		} catch (SQLException e) {
 			e.printStackTrace();
-		} finally {
-			DB.closePreparedStatement(cad);
-			DB.closeConnection();
 		}
 	}
 
 	@Override
 	public void atualizar(ItemVenda itemVenda) {
-		PreparedStatement atualizar = null;
-		try {
-			connection = DB.getConnection();
-			atualizar = connection.prepareStatement("UPDATE itemvenda set quantidade = ? WHERE ID = ?");
+		try (Connection connection = DB.getConnection();
+				PreparedStatement atualizar = connection
+						.prepareStatement("UPDATE itemvenda set quantidade = ? WHERE ID = ?")) {
 			atualizar.setInt(1, itemVenda.getQuantidade());
 			atualizar.setInt(2, itemVenda.getId());
 			atualizar.executeUpdate();
 		} catch (SQLException e) {
 			e.printStackTrace();
-		} finally {
-			DB.closePreparedStatement(atualizar);
-			DB.closeConnection();
 		}
-
 	}
 
 	@Override
 	public void excluir(ItemVenda itemVenda) {
-		PreparedStatement excluir = null;
-		try {
-			connection = DB.getConnection();
-			excluir = connection.prepareStatement("DELETE FROM itemvenda WHERE ID = ?");
+		try (Connection connection = DB.getConnection();
+				PreparedStatement excluir = connection.prepareStatement("DELETE FROM itemvenda WHERE ID = ?")) {
 			excluir.setInt(1, itemVenda.getId());
 			excluir.executeUpdate();
 		} catch (SQLException e) {
 			e.printStackTrace();
-		} finally {
-			DB.closePreparedStatement(excluir);
-			DB.closeConnection();
 		}
-
 	}
 
 	@Override
 	public List<ItemVenda> consultar() {
 		List<ItemVenda> itemVendas = new ArrayList<>();
-		try {
-			connection = DB.getConnection();
-			st = connection.createStatement();
-			rs = st.executeQuery("SELECT quantidade, subtotal  FROM  itemvenda");
+		try (Connection connection = DB.getConnection();
+				Statement st = connection.createStatement();
+				ResultSet rs = st.executeQuery("SELECT quantidade, subtotal FROM itemvenda")) {
 			while (rs.next()) {
 				ItemVenda vendas = new ItemVenda();
 				vendas.setQuantidade(rs.getInt("quantidade"));
@@ -89,12 +74,29 @@ public class ItemVendaCRUDImpl implements ItemVendaCRUD {
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
-		} finally {
-			DB.closeResultSet(rs);
-			DB.closeStatement(st);
-			DB.closeConnection();
 		}
 		return itemVendas;
 	}
 
+	public void consultarPorId(int id) throws SQLException {
+		ItemVenda itemVenda = null;
+		try (Connection connection = DB.getConnection();
+				PreparedStatement stmt = connection.prepareStatement("SELECT * FROM itemvenda WHERE ID = ?")) {
+
+			stmt.setInt(1, id);
+			ResultSet rs = stmt.executeQuery();
+
+			if (rs.next()) {
+				int idVenda = rs.getInt("id_venda");
+				int idProduto = rs.getInt("id_produto");
+				int quantidade = rs.getInt("quantidade");
+				BigDecimal subtotal = rs.getBigDecimal("subtotal");
+
+				itemVenda = new ItemVenda(id, idProduto, quantidade, subtotal);
+			}
+
+		}catch(SQLException e ) {
+			e.printStackTrace();
+		}
+	}
 }

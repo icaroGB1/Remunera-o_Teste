@@ -5,7 +5,7 @@ import java.util.List;
 import Entidades.Funcionario;
 import Entidades.Usuario;
 
-public interface funcionarioCRUD {
+public interface funcionarioCRUD  {
 	void cadastrar(Funcionario funcionario, Usuario usuario);
 	void atualizar(Funcionario funcionario);
 	void excluir(Funcionario funcionario);
@@ -13,4 +13,5 @@ public interface funcionarioCRUD {
 	void lancarProdutividade();
 	void consultarPerfomace();
 	void consultarPagamento();
+	void consultarId(int id);
 }	

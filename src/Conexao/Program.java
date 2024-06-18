@@ -1,18 +1,19 @@
 package Conexao;
 
-import java.sql.SQLException;
+import java.math.BigDecimal;
 
-import Entidades.Usuario;
-import crud.usuarioCRUDImpl;
+import Entidades.Produto;
+import crud.ProdutoCRUDImpl;
+import enums.CategoriaProduto;
 
 public class Program {
 	public static void main(String[] args) throws Exception {
-		Usuario usuario = new Usuario("icaro", "icaro@", "13456icaro");
+		Produto prod = new Produto("Agua", "Agua mineral 500ML", CategoriaProduto.ALIMENTOS_E_BEBIDAS, new BigDecimal("2.50"));
 		try {
-			usuarioCRUDImpl usuarioCrud = new usuarioCRUDImpl(DB.getConnection());
-			usuarioCrud.logar(usuario);
-		}catch (SQLException e) {
-			System.out.println("Ocorreu um erro ao atualizar o usuário: " + e.getMessage());
+			ProdutoCRUDImpl prodImpl = new ProdutoCRUDImpl();
+			prodImpl.cadastrar(prod);
+		}catch (Exception e) {
+			System.out.println("Ocorreu um erro ao atualizar o Produto: " + e.getMessage());
 		}
 	}
 }

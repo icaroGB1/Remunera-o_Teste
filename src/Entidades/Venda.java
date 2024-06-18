@@ -2,20 +2,21 @@ package Entidades;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 public class Venda {
 	private int id;
-	private LocalDate datae;
+	private LocalDate data;
 	private int idFuncionario;
 	private BigDecimal total;
+	private List<ItemVenda>itens;
 
 	public Venda() {
 
 	}
 
-	public Venda(int id, LocalDate datae, int idFuncionario, BigDecimal total) {
-		this.id = id;
-		this.datae = datae;
+	public Venda(LocalDate data, int idFuncionario, BigDecimal total) {
+		this.data = data.now();
 		this.idFuncionario = idFuncionario;
 		this.total = total;
 	}
@@ -28,12 +29,12 @@ public class Venda {
 		this.id = id;
 	}
 
-	public LocalDate getDatae() {
-		return datae;
+	public LocalDate getData() {
+		return data;
 	}
 
-	public void setDatae(LocalDate datae) {
-		this.datae = datae;
+	public void setData(LocalDate data) {
+		this.data = data;
 	}
 
 	public int getIdFuncionario() {
@@ -51,5 +52,21 @@ public class Venda {
 	public void setTotal(BigDecimal total) {
 		this.total = total;
 	}
+	
+	  public List<ItemVenda> getItens() {
+		return itens;
+	}
+
+	public void setItens(List<ItemVenda> itens) {
+		this.itens = itens;
+	}
+
+	public void calcularTotal() {
+	        BigDecimal total = BigDecimal.ZERO;
+	        for (ItemVenda item : itens) {
+	            total = total.add(item.getSubtotal());
+	        }
+	        this.total = total;
+	    }
 
 }

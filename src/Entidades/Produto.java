@@ -15,8 +15,7 @@ public class Produto {
 	public Produto() {
 	}
 
-	public Produto(int id, String nome, String descricao, CategoriaProduto categoria, BigDecimal preco) throws Exception {
-		this.id = id;
+	public Produto(String nome, String descricao, CategoriaProduto categoria, BigDecimal preco) throws Exception {
 		this.nome = nome;
 		this.descricao = descricao;
 		this.categoria = categoria;

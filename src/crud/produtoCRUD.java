@@ -8,5 +8,5 @@ public interface produtoCRUD {
 	void cadastrar(Produto produto);
 	void atualizar(Produto produto);
 	void excluir(Produto produto);
-	List<Produto> consultar();
+	List<Produto> consultar() throws Exception;
 }

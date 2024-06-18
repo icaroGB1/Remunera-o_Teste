@@ -1,20 +1,26 @@
 package Entidades;
 
+import enums.Cargo;
 import exceptions.EmailInvalidoException;
 import exceptions.NomeIncompletoException;
+import exceptions.SenhaInvalidaException;
 
 public class Usuario {
 	private int id;
-	private String name;
+	private String nome;
 	private String email;
 	private String senha;
+	private Cargo cargo;
 
 	public Usuario() {
 	}
 
-	public Usuario(String name, String email, String senha) throws Exception {
-		this.name = name;
-		if (name.length() < 10) {
+	public Usuario(String nome, String email, String senha, Cargo cargo) throws Exception{
+		if (nome.isEmpty() || email.isEmpty() || senha.isEmpty() || cargo == null) {
+	        throw new Exception("Campos vazios");
+	    }
+		this.nome = nome;
+		if (nome.length() < 10) {
 			throw new NomeIncompletoException("Nome Incopleto");
 		}
 		this.email = email;
@@ -22,6 +28,10 @@ public class Usuario {
 			throw new EmailInvalidoException("Email invalido " + email);
 		}
 		this.senha = senha;
+		if (senha.length() < 6) {
+			throw new SenhaInvalidaException("Senha muito curta");
+		}
+		this.cargo = cargo;
 	}
 
 	public int getId() {
@@ -32,12 +42,12 @@ public class Usuario {
 		this.id = id;
 	}
 
-	public String getName() {
-		return name;
+	public String getNome() {
+		return nome;
 	}
 
-	public void setName(String name) {
-		this.name = name;
+	public void setNome(String nome) {
+		this.nome = nome;
 	}
 
 	public String getSenha() {
@@ -56,8 +66,16 @@ public class Usuario {
 		this.email = email;
 	}
 
+	public Cargo getCargo() {
+		return cargo;
+	}
+
+	public void setCargo(Cargo cargo) {
+		this.cargo = cargo;
+	}
+
 	public String toString() {
-		return "Usuario [id=" + id + ", name=" + name + ", email=" + email + "]";
+		return "Usuario [id=" + id + ", nome=" + nome + ", email=" + email + "]";
 	}
 
 }

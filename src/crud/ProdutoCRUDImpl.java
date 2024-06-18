@@ -15,36 +15,27 @@ import Entidades.Produto;
 import enums.CategoriaProduto;
 
 public class ProdutoCRUDImpl implements produtoCRUD {
-	Statement st = null;
-	Connection connection = null;
-	ResultSet rs = null;
+	private Scanner sc = new Scanner(System.in);
 
 	@Override
 	public void cadastrar(Produto produto) {
-		PreparedStatement cad = null;
-		try {
-			connection = DB.getConnection();
-			cad = connection
-					.prepareStatement("INSERT INTO produtos (nome,descricao,categoria,preco) values (?, ?, ?,?)");
+		try (Connection connection = DB.getConnection();
+				PreparedStatement cad = connection.prepareStatement(
+						"INSERT INTO produtos (nome, descricao, categoria, preco) VALUES (?, ?, ?, ?)")) {
 			cad.setString(1, produto.getNome());
 			cad.setString(2, produto.getDescricao());
 			cad.setString(3, produto.getCategoria().name());
 			cad.setBigDecimal(4, produto.getPreco());
 			cad.executeUpdate();
 		} catch (SQLException e) {
+			System.err.println("Erro ao cadastrar produto: " + e.getMessage());
 			e.printStackTrace();
-		} finally {
-			DB.closePreparedStatement(cad);
-			DB.closeConnection();
 		}
 	}
 
 	@Override
 	public void atualizar(Produto produto) {
-		PreparedStatement atualizar = null;
-		Scanner sc = new Scanner(System.in);
-		try {
-			connection = DB.getConnection();
+		try (Connection connection = DB.getConnection()) {
 			System.out.println("Informe o que deseja atualizar");
 			System.out.println("1-nome\r\n" + "2-descrição\r\n " + "3-categoria\r\n" + "4-preço");
 			int op = sc.nextInt();
@@ -53,72 +44,73 @@ public class ProdutoCRUDImpl implements produtoCRUD {
 			case 1:
 				System.out.println("Informe o novo nome");
 				String novoNome = sc.nextLine();
-				atualizar = connection.prepareStatement("UPDATE produtos set nome = ? WHERE ID =?");
-				atualizar.setString(1, novoNome);
-				atualizar.setInt(2, produto.getId());
-				atualizar.executeUpdate();
+				try (PreparedStatement atualizar = connection
+						.prepareStatement("UPDATE produtos SET nome = ? WHERE id = ?")) {
+					atualizar.setString(1, novoNome);
+					atualizar.setInt(2, produto.getId());
+					atualizar.executeUpdate();
+				}
 				break;
 			case 2:
 				System.out.println("Informe a nova Descrição");
 				String novaDescricao = sc.nextLine();
-				atualizar = connection.prepareStatement("UPDATE produtos set descricao = ? WHERE ID =?");
-				atualizar.setString(1, novaDescricao);
-				atualizar.setInt(2, produto.getId());
-				atualizar.executeUpdate();
+				try (PreparedStatement atualizar = connection
+						.prepareStatement("UPDATE produtos SET descricao = ? WHERE id = ?")) {
+					atualizar.setString(1, novaDescricao);
+					atualizar.setInt(2, produto.getId());
+					atualizar.executeUpdate();
+				}
 				break;
 			case 3:
-				System.out.println("Qual categoria você deseja botar");
-				System.out.println(produto.getCategoria().name());
-				atualizar = connection.prepareStatement("UPDATE produtos set categoria = ? WHERE ID =?");
-				atualizar.setString(1, produto.getCategoria().name());
-				atualizar.setInt(2, produto.getId());
-				atualizar.executeUpdate();
+				System.out.println("Informe a nova categoria");
+				String novaCategoria = sc.nextLine();
+				try (PreparedStatement atualizar = connection
+						.prepareStatement("UPDATE produtos SET categoria = ? WHERE id = ?")) {
+					atualizar.setString(1, novaCategoria);
+					atualizar.setInt(2, produto.getId());
+					atualizar.executeUpdate();
+				}
 				break;
 			case 4:
 				System.out.println("Informe o novo preço");
 				BigDecimal novoPreco = sc.nextBigDecimal();
-				atualizar = connection.prepareStatement("UPDATE produtos set preco = ? WHERE ID =?");
-				atualizar.setBigDecimal(1, novoPreco);
-				atualizar.setInt(2, produto.getId());
-				atualizar.executeUpdate();
+				try (PreparedStatement atualizar = connection
+						.prepareStatement("UPDATE produtos SET preco = ? WHERE id = ?")) {
+					atualizar.setBigDecimal(1, novoPreco);
+					atualizar.setInt(2, produto.getId());
+					atualizar.executeUpdate();
+				}
 				break;
 			default:
-				System.out.println("Opção invalida");
+				System.out.println("Opção inválida");
 			}
 		} catch (SQLException e) {
+			System.err.println("Erro ao atualizar produto: " + e.getMessage());
 			e.printStackTrace();
-		} finally {
-			DB.closePreparedStatement(atualizar);
-			DB.closeConnection();
 		}
-
 	}
 
 	@Override
 	public void excluir(Produto produto) {
-		PreparedStatement excluir = null;
-		try {
-			connection = DB.getConnection();
-			excluir = connection.prepareStatement("DELETE FROM produtos WHERE ID = ?");
+		try (Connection connection = DB.getConnection();
+				PreparedStatement excluir = connection.prepareStatement("DELETE FROM produtos WHERE id = ?")) {
 			excluir.setInt(1, produto.getId());
 			excluir.executeUpdate();
 		} catch (SQLException e) {
+			System.err.println("Erro ao excluir produto: " + e.getMessage());
 			e.printStackTrace();
-		} finally {
-			DB.closePreparedStatement(excluir);
-			DB.closeConnection();
 		}
 	}
 
 	@Override
 	public List<Produto> consultar() {
 		List<Produto> produtos = new ArrayList<>();
-		try {
-			connection = DB.getConnection();
-			st = connection.createStatement();
-			rs = st.executeQuery("SELECT nome,descricao,categoria,preco  FROM  produtos");
+		try (Connection connection = DB.getConnection();
+				Statement st = connection.createStatement();
+				ResultSet rs = st.executeQuery("SELECT id, nome, descricao, categoria, preco FROM produtos")) {
 			while (rs.next()) {
 				Produto produto = new Produto();
+				produto.setId(rs.getInt("id"));
 				produto.setNome(rs.getString("nome"));
 				produto.setDescricao(rs.getString("descricao"));
 				produto.setCategoria(CategoriaProduto.valueOf(rs.getString("categoria")));
@@ -126,12 +118,14 @@ public class ProdutoCRUDImpl implements produtoCRUD {
 				produtos.add(produto);
 			}
 		} catch (SQLException e) {
+			System.err.println("Erro ao consultar produtos: " + e.getMessage());
 			e.printStackTrace();
-		} finally {
-			DB.closeResultSet(rs);
-			DB.closeStatement(st);
-			DB.closeConnection();
 		}
 		return produtos;
+	}
+
+	public Produto consultarPorNome(String nomeProduto) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

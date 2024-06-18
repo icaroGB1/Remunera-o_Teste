@@ -1,6 +1,7 @@
 package Entidades;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public class ItemVenda {
 	private int id;
@@ -8,6 +9,10 @@ public class ItemVenda {
 	private int idProduto;
 	private int quantidade;
 	private BigDecimal subtotal;
+	private List<ItemVenda>itens;
+	
+	private Produto produto;
+
 
 	public ItemVenda() {
 	}
@@ -58,6 +63,22 @@ public class ItemVenda {
 	public void setSubtotal(BigDecimal subtotal) {
 		this.subtotal = subtotal;
 	}
+	
+	public List<ItemVenda> getItens() {
+		return itens;
+	}
+
+	public void setItens(List<ItemVenda> itens) {
+		this.itens = itens;
+	}
+	public Produto getProduto() {
+		return produto;
+	}
+
+	public void setProduto(Produto produto) {
+		this.produto = produto;
+	}
+
 	  public void calcularSubtotal(Produto produto) {
 	        BigDecimal precoUnitario = produto.getPreco();
 	        BigDecimal quantidadeBigDecimal = new BigDecimal(quantidade);

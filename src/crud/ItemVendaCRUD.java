@@ -7,7 +7,7 @@ import Entidades.Produto;
 import Entidades.Venda;
 
 public interface ItemVendaCRUD {
-	void cadastrar(ItemVenda itemVenda, Venda venda, Produto produto);
+	void cadastrar(ItemVenda itemVenda, Venda venda,List<ItemVenda> itensVenda);
     void atualizar(ItemVenda itemVenda);
     void excluir(ItemVenda itemVenda);
     List<ItemVenda> consultar();

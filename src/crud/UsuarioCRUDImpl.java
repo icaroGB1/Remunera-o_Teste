@@ -11,72 +11,62 @@ import java.util.Scanner;
 
 import Conexao.DB;
 import Entidades.Usuario;
+import enums.Cargo;
 import exceptions.EmailInvalidoException;
 import exceptions.EmailJaCadastradoException;
 import exceptions.senhaIncorretaException;
 import exceptions.usuarioOuSenhaIncorretaException;
 
 public class usuarioCRUDImpl implements usuarioCRUD {
-	Statement st = null;
-	Connection connection = null;
-	ResultSet rs = null;
 
-	public usuarioCRUDImpl(Connection connection) {
-		this.connection = connection;
+	private Connection getConnection() throws SQLException {
+		return DB.getConnection();
 	}
 
 	@Override
 	public void cadastrar(Usuario usuario) throws Exception {
-		PreparedStatement cad = null;
-		try {
-			connection = DB.getConnection();
-			if (EmailJaCadastrado(usuario.getEmail())) {
-				throw new EmailJaCadastradoException("Email ja Cadastrado");
+		try (Connection connection = getConnection();
+				PreparedStatement cad = connection
+						.prepareStatement("INSERT INTO usuarios (nome, email, senha, cargo) VALUES (?, ?, ?, ?)")) {
+			if (EmailJaCadastrado(usuario.getEmail(), connection)) {
+				throw new EmailJaCadastradoException("Email já cadastrado");
 			}
-			cad = connection.prepareStatement("INSERT INTO usuarios  (name, email, senha)  VALUES (?, ?, ?)");
-			cad.setString(1, usuario.getName());
+			cad.setString(1, usuario.getNome());
 			cad.setString(2, usuario.getEmail());
 			cad.setString(3, usuario.getSenha());
-
+			cad.setString(4, usuario.getCargo().name());
 			cad.executeUpdate();
-
 		} catch (SQLException e) {
 			e.printStackTrace();
 			throw new Exception("Erro ao cadastrar usuário: " + e.getMessage());
-		} finally {
-			DB.closePreparedStatement(cad);
-			DB.closeConnection();
 		}
 	}
 
 	@Override
 	public void atualizar(Usuario usuario) {
-		PreparedStatement atualizar = null;
-		Scanner sc = new Scanner(System.in);
-		try {
-			connection = DB.getConnection();
+		try (Connection connection = getConnection(); Scanner sc = new Scanner(System.in)) {
 			System.out.println("Informe o que deseja atualizar");
-			System.out.println("1-Nome\r\n" + "2-Email\r\n" + "3-senha");
+			System.out.println("1-Nome\r\n" + "2-Email\r\n" + "3-Senha\r\n" + "4-Cargo");
 			int op = sc.nextInt();
 			sc.nextLine();
+			PreparedStatement atualizar;
 			switch (op) {
 			case 1:
 				System.out.println("Informe o novo nome");
 				String novoNome = sc.nextLine();
-				atualizar = connection.prepareStatement("UPDATE usuarios SET name = ? WHERE id = ?");
+				atualizar = connection.prepareStatement("UPDATE usuarios SET nome = ? WHERE id = ?");
 				atualizar.setString(1, novoNome);
 				atualizar.setInt(2, usuario.getId());
 				atualizar.executeUpdate();
 				break;
-
 			case 2:
 				System.out.println("Informe o novo email");
 				String novoEmail = sc.next();
 				if (!novoEmail.contains("@")) {
-					throw new EmailInvalidoException("Email invalido " + novoEmail);
+					throw new EmailInvalidoException("Email inválido " + novoEmail);
 				}
-				atualizar = connection.prepareStatement("UPDATE usuarios SET email = ? WHERE  + id= ? ");
-				atualizar.setNString(1, novoEmail);
+				atualizar = connection.prepareStatement("UPDATE usuarios SET email = ? WHERE id = ?");
+				atualizar.setString(1, novoEmail);
 				atualizar.setInt(2, usuario.getId());
 				atualizar.executeUpdate();
 				break;
@@ -84,115 +74,95 @@ public class usuarioCRUDImpl implements usuarioCRUD {
 				System.out.println("Informe a nova senha");
 				String novaSenha = sc.nextLine();
 				if (!novaSenha.equals(usuario.getSenha())) {
-					throw new senhaIncorretaException("Senha Incorreta");
+					throw new senhaIncorretaException("Senha incorreta");
 				}
-				atualizar = connection.prepareStatement("UPDATE usuarios SET senha = ? WHERE  + id= ? ");
+				atualizar = connection.prepareStatement("UPDATE usuarios SET senha = ? WHERE id = ?");
 				atualizar.setString(1, novaSenha);
 				atualizar.setInt(2, usuario.getId());
 				atualizar.executeUpdate();
 				break;
+			case 4:
+				System.out.println("Informe o novo cargo");
+				String novoCargo = sc.nextLine();
+				atualizar = connection.prepareStatement("UPDATE usuarios SET cargo = ? WHERE id = ?");
+				atualizar.setString(1, novoCargo);
+				atualizar.setInt(2, usuario.getId());
+				atualizar.executeUpdate();
+				break;
 			default:
-				System.out.println("Opção Invalida");
+				System.out.println("Opção Inválida");
 			}
 		} catch (SQLException e) {
+			System.err.println("Erro ao cadastrar atualizar: " + e.getMessage());
 			e.printStackTrace();
-		} catch (EmailInvalidoException e) {
-			System.out.println("Email invalido");
-		} catch (senhaIncorretaException e) {
-			System.out.println("Senha incorreta");
-		} finally {
-			DB.closePreparedStatement(atualizar);
-			DB.closeConnection();
-			sc.close();
+		} catch (EmailInvalidoException | senhaIncorretaException e) {
+			System.out.println(e.getMessage());
 		}
 	}
 
 	@Override
 	public void excluir(Usuario usuario) {
-		PreparedStatement excluir = null;
-		try {
-			connection = DB.getConnection();
-			excluir = connection.prepareStatement("DELETE FROM usuarios WHERE id = ?");
+		try (Connection connection = getConnection();
+				PreparedStatement excluir = connection.prepareStatement("DELETE FROM usuarios WHERE id = ?")) {
 			excluir.setInt(1, usuario.getId());
 			excluir.executeUpdate();
 		} catch (SQLException e) {
+			System.err.println("Erro ao excluir usuario: " + e.getMessage());
 			e.printStackTrace();
-		} finally {
-			DB.closePreparedStatement(excluir);
-			DB.closeConnection();
 		}
 	}
 
 	@Override
 	public void logar(Usuario usuario) throws Exception {
-		boolean loginSucesso = false;
-		PreparedStatement logar = null;
-		try {
-			connection = DB.getConnection();
-			logar = connection
-					.prepareStatement("SELECT Name, senha" + " FROM usuarios" + " where name = ? and senha = ?");
-			logar.setString(1, usuario.getName());
+		try (Connection connection = getConnection();
+				PreparedStatement logar = connection
+						.prepareStatement("SELECT nome, senha FROM usuarios WHERE nome = ? AND senha = ?")) {
+			logar.setString(1, usuario.getNome());
 			logar.setString(2, usuario.getSenha());
-			rs = logar.executeQuery();
-			if (!rs.next()) {
-				throw new usuarioOuSenhaIncorretaException("Usuario e/ou Senha Incorreta");
-			} else {
-				loginSucesso = true;
-				System.out.println("Login bem-sucedido!");
+			try (ResultSet rs = logar.executeQuery()) {
+				if (!rs.next()) {
+					throw new usuarioOuSenhaIncorretaException("Usuário e/ou senha incorretos");
+				} else {
+					System.out.println("Login bem-sucedido!");
+				}
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
-		} finally {
-			DB.closeResultSet(rs);
-			DB.closePreparedStatement(logar);
-			DB.closeConnection();
 		}
-
 	}
 
 	@Override
 	public List<Usuario> consultar() {
 		List<Usuario> usuarios = new ArrayList<>();
-		try {
-			connection = DB.getConnection();
-			st = connection.createStatement();
-			rs = st.executeQuery("SELECT name, email  FROM usuarios");
+		try (Connection connection = getConnection();
+				Statement st = connection.createStatement();
+				ResultSet rs = st.executeQuery("SELECT nome, email, cargo FROM usuarios")) {
 			while (rs.next()) {
-				Usuario usuario = new Usuario(rs.getString("name"), rs.getString("email"), null);
+				String nome = rs.getString("nome");
+				String email = rs.getString("email");
+				String cargoStr = rs.getString("cargo");
+				Usuario usuario = new Usuario(nome, email, null, Cargo.valueOf(cargoStr));
 				usuarios.add(usuario);
 			}
-		} catch (SQLException e) {
-			e.printStackTrace();
 		} catch (Exception e) {
+			System.err.println("Erro ao consultar usuario: " + e.getMessage());
 			e.printStackTrace();
-		} finally {
-			DB.closeResultSet(rs);
-			DB.closeStatement(st);
-			DB.closeConnection();
 		}
 		return usuarios;
 	}
 
 	@Override
-	public boolean EmailJaCadastrado(String email) {
-		PreparedStatement ps = null;
-		ResultSet rs = null;
-		boolean emailExists = false;
-		try {
-			connection = DB.getConnection();
-			ps = connection.prepareStatement("SELECT COUNT(*) FROM usuarios WHERE email = ?");
+	public boolean EmailJaCadastrado(String email, Connection connection) {
+		try (PreparedStatement ps = connection.prepareStatement("SELECT COUNT(*) FROM usuarios WHERE email = ?")) {
 			ps.setString(1, email);
-			rs = ps.executeQuery();
-			if (rs.next()) {
-				emailExists = rs.getInt(1) > 0;
+			try (ResultSet rs = ps.executeQuery()) {
+				if (rs.next()) {
+					return rs.getInt(1) > 0;
+				}
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
-		} finally {
-			DB.closeResultSet(rs);
-			DB.closePreparedStatement(ps);
-			DB.closeConnection();
 		}
-		return emailExists;
+		return false;
 	}
 }
