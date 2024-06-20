@@ -13,6 +13,7 @@ import java.util.Scanner;
 import Conexao.DB;
 import Entidades.Produto;
 import enums.CategoriaProduto;
+import exceptions.ProdutoNaoEncontradoException;
 
 public class ProdutoCRUDImpl implements produtoCRUD {
 	private Scanner sc = new Scanner(System.in);
@@ -36,53 +37,14 @@ public class ProdutoCRUDImpl implements produtoCRUD {
 	@Override
 	public void atualizar(Produto produto) {
 		try (Connection connection = DB.getConnection()) {
-			System.out.println("Informe o que deseja atualizar");
-			System.out.println("1-nome\r\n" + "2-descrição\r\n " + "3-categoria\r\n" + "4-preço");
-			int op = sc.nextInt();
-			sc.nextLine();
-			switch (op) {
-			case 1:
-				System.out.println("Informe o novo nome");
-				String novoNome = sc.nextLine();
-				try (PreparedStatement atualizar = connection
-						.prepareStatement("UPDATE produtos SET nome = ? WHERE id = ?")) {
-					atualizar.setString(1, novoNome);
-					atualizar.setInt(2, produto.getId());
-					atualizar.executeUpdate();
-				}
-				break;
-			case 2:
-				System.out.println("Informe a nova Descrição");
-				String novaDescricao = sc.nextLine();
-				try (PreparedStatement atualizar = connection
-						.prepareStatement("UPDATE produtos SET descricao = ? WHERE id = ?")) {
-					atualizar.setString(1, novaDescricao);
-					atualizar.setInt(2, produto.getId());
-					atualizar.executeUpdate();
-				}
-				break;
-			case 3:
-				System.out.println("Informe a nova categoria");
-				String novaCategoria = sc.nextLine();
-				try (PreparedStatement atualizar = connection
-						.prepareStatement("UPDATE produtos SET categoria = ? WHERE id = ?")) {
-					atualizar.setString(1, novaCategoria);
-					atualizar.setInt(2, produto.getId());
-					atualizar.executeUpdate();
-				}
-				break;
-			case 4:
-				System.out.println("Informe o novo preço");
-				BigDecimal novoPreco = sc.nextBigDecimal();
-				try (PreparedStatement atualizar = connection
-						.prepareStatement("UPDATE produtos SET preco = ? WHERE id = ?")) {
-					atualizar.setBigDecimal(1, novoPreco);
-					atualizar.setInt(2, produto.getId());
-					atualizar.executeUpdate();
-				}
-				break;
-			default:
-				System.out.println("Opção inválida");
+			try (PreparedStatement atualizar = connection.prepareStatement(
+					"UPDATE produtos SET nome = ?, descricao = ?, categoria = ?, preco = ? WHERE id = ?")) {
+				atualizar.setString(1, produto.getNome());
+				atualizar.setString(2, produto.getDescricao());
+				atualizar.setString(3, produto.getCategoria().name());
+				atualizar.setBigDecimal(4, produto.getPreco());
+				atualizar.setInt(5, produto.getId());
+				atualizar.executeUpdate();
 			}
 		} catch (SQLException e) {
 			System.err.println("Erro ao atualizar produto: " + e.getMessage());
@@ -124,8 +86,29 @@ public class ProdutoCRUDImpl implements produtoCRUD {
 		return produtos;
 	}
 
-	public Produto consultarPorNome(String nomeProduto) {
-		// TODO Auto-generated method stub
+	@Override
+	public Produto consultarPorId(int idProduto) throws Exception {
+		try (Connection connection = DB.getConnection();
+				PreparedStatement st = connection.prepareStatement("SELECT * FROM produtos WHERE id = ?")) {
+			st.setInt(1, idProduto);
+			try (ResultSet rs = st.executeQuery()) {
+				if (rs.next()) {
+					Produto produto = new Produto();
+					produto.setId(rs.getInt("id"));
+					produto.setNome(rs.getString("nome"));
+					produto.setDescricao(rs.getString("descricao"));
+					produto.setCategoria(CategoriaProduto.valueOf(rs.getString("categoria")));
+					produto.setPreco(rs.getBigDecimal("preco"));
+					return produto;
+				} else {
+					throw new ProdutoNaoEncontradoException("Produto nao encontrado");
+				}
+			}
+		} catch (SQLException e) {
+			System.err.println("Erro ao Consultar Produto: " + e.getMessage());
+			e.printStackTrace();
+		}
 		return null;
 	}
+
 }

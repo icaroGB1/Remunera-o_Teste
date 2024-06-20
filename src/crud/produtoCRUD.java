@@ -9,4 +9,5 @@ public interface produtoCRUD {
 	void atualizar(Produto produto);
 	void excluir(Produto produto);
 	List<Produto> consultar() throws Exception;
+	Produto consultarPorId(int idProduto) throws Exception;
 }

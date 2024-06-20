@@ -12,6 +12,7 @@ import java.util.Scanner;
 
 import Conexao.DB;
 import Entidades.Funcionario;
+import Entidades.Meta;
 import Entidades.Usuario;
 
 public class funcionarioCRUDimpl implements funcionarioCRUD {
@@ -25,7 +26,7 @@ public class funcionarioCRUDimpl implements funcionarioCRUD {
 						"INSERT INTO funcionarios (user_id, nome, cargo, salario) values (?, ?, ?, ?)")) {
 			cad.setInt(1, usuario.getId());
 			cad.setString(2, usuario.getNome());
-			cad.setString(3, funcionario.getCargo());
+			cad.setString(3, usuario.getCargo().name());
 			cad.setBigDecimal(4, funcionario.getSalario());
 			cad.executeUpdate();
 		} catch (SQLException e) {
@@ -101,16 +102,20 @@ public class funcionarioCRUDimpl implements funcionarioCRUD {
 	}
 
 	@Override
-	public void lancarProdutividade() {
+	public void lancarProdutividade(Funcionario funcionario, Meta meta) {
+		MetaCRUDimpl metas = new MetaCRUDimpl();
+		metas.calcularPorcentagemAtingidaFuncionario(funcionario.getId());
 	}
 
 	@Override
-	public void consultarPerfomace() {
-
+	public void consultarPerfomace(Funcionario funcionario, Meta meta) throws Exception {
+		MetaCRUDimpl metas = new MetaCRUDimpl();
+		metas.consultarPorFuncionario(funcionario.getId());
 	}
 
 	@Override
 	public void consultarPagamento() {
+
 	}
 
 	@Override

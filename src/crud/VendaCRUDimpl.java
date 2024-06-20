@@ -9,56 +9,71 @@ import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 import Conexao.DB;
 import Entidades.Funcionario;
 import Entidades.ItemVenda;
-import Entidades.Produto;
 import Entidades.Venda;
+import exceptions.VendaNaoPermitidaException;
 
 public class VendaCRUDimpl implements VendaCRUD {
+	Scanner sc = new Scanner(System.in);
 
 	@Override
-	public void cadastrar(Venda venda, Funcionario funcionario, List<ItemVenda> itensVenda) {
-		try (Connection connection = DB.getConnection();
-				PreparedStatement cad = connection.prepareStatement(
-						"INSERT INTO vendas(data, id_funcionario, total) VALUES (?, ?, ?)",
-						Statement.RETURN_GENERATED_KEYS);
-				PreparedStatement atualizarTotal = connection
-						.prepareStatement("UPDATE vendas SET total = ? WHERE id = ?")) {
-
+	public void cadastrar(Venda venda, Funcionario funcionario, List<ItemVenda> itensVenda) throws Exception {
+		Connection connection = null;
+		try {
+			connection = DB.getConnection();
 			connection.setAutoCommit(false);
 
-			cad.setDate(1, java.sql.Date.valueOf(venda.getData()));
-			cad.setInt(2, funcionario.getId());
-			cad.setBigDecimal(3, venda.getTotal());
-			cad.executeUpdate();
+			try (PreparedStatement cad = connection.prepareStatement(
+					"INSERT INTO vendas(data, id_funcionario, total) VALUES (?, ?, ?)",
+					Statement.RETURN_GENERATED_KEYS);
+					PreparedStatement atualizarTotal = connection
+							.prepareStatement("UPDATE vendas SET total = ? WHERE id = ?");
+					PreparedStatement consultaItemVendas = connection
+							.prepareStatement("SELECT * FROM item_venda WHERE id_venda = ?")) {
 
-			try (ResultSet rs = cad.getGeneratedKeys()) {
-				if (rs.next()) {
-					int ultimoId = rs.getInt(1);
-					venda.setId(ultimoId);
+				cad.setDate(1, java.sql.Date.valueOf(venda.getData()));
+				cad.setInt(2, funcionario.getId());
+				cad.setBigDecimal(3, venda.getTotal());
+				cad.executeUpdate();
+
+				try (ResultSet rs = cad.getGeneratedKeys()) {
+					if (rs.next()) {
+						int ultimoId = rs.getInt(1);
+						venda.setId(ultimoId);
+					}
 				}
+
+				ItemVendaCRUDImpl itemVendasCRUD = new ItemVendaCRUDImpl();
+				itemVendasCRUD.cadastrar(null, venda, itensVenda);
+
+				venda.calcularTotal();
+				atualizarTotal.setBigDecimal(1, venda.getTotal());
+				atualizarTotal.setInt(2, venda.getId());
+				atualizarTotal.executeUpdate();
+
+				connection.commit();
+
+			} catch (SQLException e) {
+				if (connection != null) {
+					connection.rollback();
+				}
+				throw new VendaNaoPermitidaException("Erro ao cadastrar venda: " + e.getMessage(), e);
 			}
-
-			ItemVendaCRUDImpl itemVendasCRUD = new ItemVendaCRUDImpl();
-			itemVendasCRUD.cadastrar(null, venda, itensVenda);
-
-			venda.calcularTotal();
-			atualizarTotal.setBigDecimal(1, venda.getTotal());
-			atualizarTotal.setInt(2, venda.getId());
-			atualizarTotal.executeUpdate();
-
-			connection.commit();
 
 		} catch (SQLException e) {
-			try {
-				DB.getConnection().rollback();
-			} catch (SQLException ex) {
-				System.err.println("Erro ao cadastrar venda: " + e.getMessage());
-				ex.printStackTrace();
+			throw new RuntimeException("Erro ao obter conexão com o banco de dados: " + e.getMessage(), e);
+		} finally {
+			if (connection != null) {
+				try {
+					connection.close();
+				} catch (SQLException e) {
+					System.err.println("Erro ao fechar a conexão: " + e.getMessage());
+				}
 			}
-			e.printStackTrace();
 		}
 	}
 
@@ -80,73 +95,63 @@ public class VendaCRUDimpl implements VendaCRUD {
 	public List<Venda> consultar() {
 		List<Venda> vendas = new ArrayList<>();
 		try (Connection connection = DB.getConnection();
-				PreparedStatement stmt = connection.prepareStatement("SELECT * FROM vendas");
-				ResultSet rs = stmt.executeQuery()) {
-
+				Statement st = connection.createStatement();
+				ResultSet rs = st.executeQuery("Select * from vendas")) {
 			while (rs.next()) {
-				int id = rs.getInt("id");
+				Venda venda = new Venda();
+				venda.setId(rs.getInt("id"));
 				LocalDate data = rs.getDate("data").toLocalDate();
-				int idFuncionario = rs.getInt("id_funcionario");
-				BigDecimal total = rs.getBigDecimal("total");
-
-				Funcionario funcionario = funcionarioCRUDimpl
-				List<ItemVenda> itensVenda = ItemVendaCRUDImpl
-
-				Venda venda = new Venda(id, data, funcionario, itensVenda, total);
+				venda.setData(data);
+				venda.setIdFuncionario(rs.getInt("id_funcionario"));
+				venda.setTotal(rs.getBigDecimal("total"));
 				vendas.add(venda);
 			}
-
 		} catch (SQLException e) {
 			System.err.println("Erro ao consultar vendas: " + e.getMessage());
 			e.printStackTrace();
 		}
-
 		return vendas;
 	}
 
 	@Override
 	public BigDecimal calcularTotalVenda(int idVenda) {
 		BigDecimal total = BigDecimal.ZERO;
-
 		try (Connection connection = DB.getConnection();
-				PreparedStatement stmt = connection.prepareStatement("SELECT total FROM vendas WHERE id = ?")) {
-
-			stmt.setInt(1, idVenda);
-			ResultSet rs = stmt.executeQuery();
-
-			if (rs.next()) {
-				total = rs.getBigDecimal("total");
+				PreparedStatement total1 = connection.prepareStatement("SELECT SUM(total) from vendas")) {
+			try (ResultSet rs = total1.executeQuery()) {
+				if (rs.next()) {
+					total = rs.getBigDecimal("total");
+				}
 			}
-
 		} catch (SQLException e) {
-			System.err.println("Erro ao calcular total da venda: " + e.getMessage());
+			System.err.println("Erro ao calcular total de vendas: " + e.getMessage());
 			e.printStackTrace();
 		}
-
 		return total;
 	}
 
 	@Override
-	public List<Venda> consultarPorData(LocalDate data) {
+	public List<Venda> consultarPorData(LocalDate dataInicial) {
 		List<Venda> vendas = new ArrayList<>();
+		LocalDate dataFinal = LocalDate.now();
 
 		try (Connection connection = DB.getConnection();
-				PreparedStatement stmt = connection.prepareStatement("SELECT * FROM vendas WHERE data = ?")) {
+				PreparedStatement consultaData = connection
+						.prepareStatement("SELECT * FROM vendas WHERE data BETWEEN ? AND ?")) {
 
-			stmt.setDate(1, java.sql.Date.valueOf(data));
-			ResultSet rs = stmt.executeQuery();
+			consultaData.setDate(1, java.sql.Date.valueOf(dataInicial));
+			consultaData.setDate(2, java.sql.Date.valueOf(dataFinal));
 
-			while (rs.next()) {
-				int id = rs.getInt("id");
-				LocalDate dataVenda = rs.getDate("data").toLocalDate();
-				int idFuncionario = rs.getInt("id_funcionario");
-				BigDecimal total = rs.getBigDecimal("total");
-
-				funcionarioCRUDimpl funcionario = funcionario.consultarId(idFuncionario);
-				List<ItemVenda> itensVenda = ItemVendaCRUDImpl.consultar(id);
-
-				Venda venda = new Venda(id, dataVenda, funcionario, itensVenda, total);
-				vendas.add(venda);
+			try (ResultSet rs = consultaData.executeQuery()) {
+				while (rs.next()) {
+					Venda venda = new Venda();
+					venda.setId(rs.getInt("id"));
+					LocalDate data = rs.getDate("data").toLocalDate();
+					venda.setData(data);
+					venda.setIdFuncionario(rs.getInt("id_funcionario"));
+					venda.setTotal(rs.getBigDecimal("total"));
+					vendas.add(venda);
+				}
 			}
 
 		} catch (SQLException e) {
@@ -160,23 +165,21 @@ public class VendaCRUDimpl implements VendaCRUD {
 	@Override
 	public List<Venda> consultarPorFuncionario(int idFuncionario) {
 		List<Venda> vendas = new ArrayList<>();
-
 		try (Connection connection = DB.getConnection();
-				PreparedStatement stmt = connection.prepareStatement("SELECT * FROM vendas WHERE id_funcionario = ?")) {
+				PreparedStatement consultaFunc = connection
+						.prepareStatement("SELECT id, data, total FROM vendas WHERE id_funcionario = ?")) {
+			consultaFunc.setInt(1, idFuncionario);
 
-			stmt.setInt(1, idFuncionario);
-			ResultSet rs = stmt.executeQuery();
-
-			while (rs.next()) {
-				int id = rs.getInt("id");
-				LocalDate data = rs.getDate("data").toLocalDate();
-				BigDecimal total = rs.getBigDecimal("total");
-
-				funcionarioCRUDimpl funcionario = funcionario.consultarId(idFuncionario);
-				List<ItemVenda> itensVenda = ItemVendaCRUDImpl.consultar(id);
-
-				Venda venda = new Venda(data, funcionario, itensVenda, total);
-				vendas.add(venda);
+			try (ResultSet rs = consultaFunc.executeQuery()) {
+				while (rs.next()) {
+					Venda venda = new Venda();
+					venda.setId(rs.getInt("id"));
+					LocalDate data = rs.getDate("data").toLocalDate();
+					venda.setData(data);
+					venda.setIdFuncionario(rs.getInt("id_funcionario"));
+					venda.setTotal(rs.getBigDecimal("total"));
+					vendas.add(venda);
+				}
 			}
 
 		} catch (SQLException e) {
@@ -186,5 +189,4 @@ public class VendaCRUDimpl implements VendaCRUD {
 
 		return vendas;
 	}
-
 }

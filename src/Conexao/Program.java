@@ -1,6 +1,9 @@
 package Conexao;
 
 import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 
 import Entidades.Produto;
 import crud.ProdutoCRUDImpl;
@@ -8,12 +11,19 @@ import enums.CategoriaProduto;
 
 public class Program {
 	public static void main(String[] args) throws Exception {
-		Produto prod = new Produto("Agua", "Agua mineral 500ML", CategoriaProduto.ALIMENTOS_E_BEBIDAS, new BigDecimal("2.50"));
-		try {
-			ProdutoCRUDImpl prodImpl = new ProdutoCRUDImpl();
-			prodImpl.cadastrar(prod);
-		}catch (Exception e) {
-			System.out.println("Ocorreu um erro ao atualizar o Produto: " + e.getMessage());
-		}
+		 String url = "jdbc:postgresql://aws-0-sa-east-1.pooler.supabase.com:6543/postgres?allowPublicKeyRetrieval=true&useSSL=false";
+	        String user = "seu_usuario";
+	        String password = "sua_senha";
+
+	        try {
+	            Class.forName("org.postgresql.Driver");
+	            try (Connection connection = DriverManager.getConnection(url, user, password)) {
+	                System.out.println("Conexão estabelecida com sucesso!");
+	            } catch (SQLException e) {
+	                throw new RuntimeException("Erro ao estabelecer conexão com o banco de dados: " + e.getMessage(), e);
+	            }
+	        } catch (ClassNotFoundException e) {
+	            throw new RuntimeException("Driver JDBC do PostgreSQL não encontrado.", e);
+	        }
+	    }
 	}
-}

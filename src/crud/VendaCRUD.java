@@ -9,7 +9,7 @@ import Entidades.ItemVenda;
 import Entidades.Venda;
 
 public interface VendaCRUD {
-	void cadastrar(Venda venda, Funcionario funcionario, List<ItemVenda> itensVenda);
+	void cadastrar(Venda venda, Funcionario funcionario, List<ItemVenda> itensVenda) throws Exception;
 	void excluir(Venda venda);
 	List<Venda> consultar();
 	BigDecimal calcularTotalVenda(int idVenda);

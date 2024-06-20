@@ -9,14 +9,15 @@ public class Venda {
 	private LocalDate data;
 	private int idFuncionario;
 	private BigDecimal total;
-	private List<ItemVenda>itens;
+	private List<ItemVenda> itens;
 
 	public Venda() {
 
 	}
 
-	public Venda(LocalDate data, int idFuncionario, BigDecimal total) {
-		this.data = data.now();
+	public Venda(int id, LocalDate data, int idFuncionario, BigDecimal total) {
+		this.id = id;
+		this.data = data;
 		this.idFuncionario = idFuncionario;
 		this.total = total;
 	}
@@ -52,8 +53,8 @@ public class Venda {
 	public void setTotal(BigDecimal total) {
 		this.total = total;
 	}
-	
-	  public List<ItemVenda> getItens() {
+
+	public List<ItemVenda> getItens() {
 		return itens;
 	}
 
@@ -62,11 +63,11 @@ public class Venda {
 	}
 
 	public void calcularTotal() {
-	        BigDecimal total = BigDecimal.ZERO;
-	        for (ItemVenda item : itens) {
-	            total = total.add(item.getSubtotal());
-	        }
-	        this.total = total;
-	    }
+		BigDecimal total = BigDecimal.ZERO;
+		for (ItemVenda item : itens) {
+			total = total.add(item.getSubtotal());
+		}
+		this.total = total;
+	}
 
 }
