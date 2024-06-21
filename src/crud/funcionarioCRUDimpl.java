@@ -114,8 +114,9 @@ public class funcionarioCRUDimpl implements funcionarioCRUD {
 	}
 
 	@Override
-	public void consultarPagamento() {
-
+	public void consultarPagamento(Funcionario funcionario, Meta meta) throws Exception {
+		MetaCRUDimpl metas = new MetaCRUDimpl();
+		metas.consultarPorFuncionario(funcionario.getId());
 	}
 
 	@Override

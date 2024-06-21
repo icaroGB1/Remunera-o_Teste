@@ -21,14 +21,21 @@ public class ItemVendaCRUDImpl implements ItemVendaCRUD {
 		try (Connection connection = DB.getConnection()) {
 			for (ItemVenda itens : itensVenda) {
 				Produto produto = itens.getProduto();
-				itens.calcularSubtotal(produto);
+				itens.calcularSubtotal();
 				try (PreparedStatement cad = connection.prepareStatement(
-						"INSERT INTO itemvenda (id_venda, id_produto, quantidade, subtotal) values(?, ?, ?, ?)")) {
-					cad.setInt(1, venda.getId());
+						"INSERT INTO itemvenda (id_venda, id_produto, quantidade, subtotal) values(?, ?, ?, ?)",
+						Statement.RETURN_GENERATED_KEYS)) {
+					cad.setInt(1, itemVenda.getIdVenda());
 					cad.setInt(2, produto.getId());
 					cad.setInt(3, itens.getQuantidade());
 					cad.setBigDecimal(4, itens.getSubtotal());
 					cad.executeUpdate();
+
+					ResultSet rs = cad.getGeneratedKeys();
+					if (rs.next()) {
+						int generatedId = rs.getInt(1);
+						itemVenda.setId(generatedId);
+					}
 				}
 			}
 		} catch (SQLException e) {
@@ -40,9 +47,10 @@ public class ItemVendaCRUDImpl implements ItemVendaCRUD {
 	public void atualizar(ItemVenda itemVenda) {
 		try (Connection connection = DB.getConnection();
 				PreparedStatement atualizar = connection
-						.prepareStatement("UPDATE itemvenda set quantidade = ? WHERE ID = ?")) {
+						.prepareStatement("UPDATE itemvenda SET quantidade = ?, subtotal = ? WHERE id = ?")) {
 			atualizar.setInt(1, itemVenda.getQuantidade());
-			atualizar.setInt(2, itemVenda.getId());
+			atualizar.setBigDecimal(2, itemVenda.getSubtotal());
+			atualizar.setInt(3, itemVenda.getId());
 			atualizar.executeUpdate();
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -50,10 +58,10 @@ public class ItemVendaCRUDImpl implements ItemVendaCRUD {
 	}
 
 	@Override
-	public void excluir(ItemVenda itemVenda) {
+	public void excluir(int idItemVenda) {
 		try (Connection connection = DB.getConnection();
 				PreparedStatement excluir = connection.prepareStatement("DELETE FROM itemvenda WHERE ID = ?")) {
-			excluir.setInt(1, itemVenda.getId());
+			excluir.setInt(1, idItemVenda);
 			excluir.executeUpdate();
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -78,25 +86,52 @@ public class ItemVendaCRUDImpl implements ItemVendaCRUD {
 		return itemVendas;
 	}
 
-	public void consultarPorId(int id) throws SQLException {
+	@Override
+	public ItemVenda consultarPorId(int id) throws SQLException {
 		ItemVenda itemVenda = null;
 		try (Connection connection = DB.getConnection();
-				PreparedStatement stmt = connection.prepareStatement("SELECT * FROM itemvenda WHERE ID = ?")) {
+				PreparedStatement consultarPorId = connection
+						.prepareStatement("SELECT * FROM itemvenda WHERE ID = ?")) {
 
-			stmt.setInt(1, id);
-			ResultSet rs = stmt.executeQuery();
+			consultarPorId.setInt(1, id);
+			ResultSet rs = consultarPorId.executeQuery();
 
 			if (rs.next()) {
 				int idVenda = rs.getInt("id_venda");
 				int idProduto = rs.getInt("id_produto");
 				int quantidade = rs.getInt("quantidade");
 				BigDecimal subtotal = rs.getBigDecimal("subtotal");
-
 				itemVenda = new ItemVenda(id, idProduto, quantidade, subtotal);
 			}
 
-		}catch(SQLException e ) {
+		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+		return itemVenda;
+	}
+	@Override
+	public List<ItemVenda> consultarPorVenda(int idVenda) {
+		List<ItemVenda> itemVendas = new ArrayList<>();
+		try (Connection connection = DB.getConnection();
+				PreparedStatement consultaVenda = connection
+						.prepareStatement("SELECT id_produto, quantidade, subtotal FROM itemvenda WHERE id_venda = ?")) {
+			consultaVenda.setInt(1, idVenda);
+
+			try (ResultSet rs = consultaVenda.executeQuery()) {
+				while (rs.next()) {
+					ItemVenda itemVenda = new ItemVenda();
+					Produto produto = new Produto();
+					itemVenda.setProduto(produto);
+					itemVenda.setQuantidade(rs.getInt("quantidade"));
+					itemVenda.setSubtotal(rs.getBigDecimal("subtotal"));
+					itemVendas.add(itemVenda);
+				}
+			}
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return itemVendas;
 	}
 }
+

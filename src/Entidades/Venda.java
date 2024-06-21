@@ -2,6 +2,7 @@ package Entidades;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Venda {
@@ -15,9 +16,8 @@ public class Venda {
 
 	}
 
-	public Venda(int id, LocalDate data, int idFuncionario, BigDecimal total) {
-		this.id = id;
-		this.data = data;
+	public Venda(int idFuncionario, BigDecimal total) {
+		this.data = LocalDate.now();
 		this.idFuncionario = idFuncionario;
 		this.total = total;
 	}
@@ -60,6 +60,10 @@ public class Venda {
 
 	public void setItens(List<ItemVenda> itens) {
 		this.itens = itens;
+	}
+
+	public void adicionarItem(ItemVenda item) {
+		this.itens.add(item);
 	}
 
 	public void calcularTotal() {

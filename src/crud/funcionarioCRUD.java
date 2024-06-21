@@ -13,6 +13,6 @@ public interface funcionarioCRUD  {
 	List<Funcionario> consultar();
 	void lancarProdutividade(Funcionario funcionario, Meta meta);
 	void consultarPerfomace(Funcionario funcionario, Meta meta) throws Exception;
-	void consultarPagamento();
+	void consultarPagamento(Funcionario funcionario, Meta meta) throws Exception ;
 	void consultarId(int id);
 }	

@@ -79,7 +79,7 @@ public class ItemVenda {
 		this.produto = produto;
 	}
 
-	  public void calcularSubtotal(Produto produto) {
+	  public void calcularSubtotal() {
 	        BigDecimal precoUnitario = produto.getPreco();
 	        BigDecimal quantidadeBigDecimal = new BigDecimal(quantidade);
 	        subtotal = precoUnitario.multiply(quantidadeBigDecimal);
